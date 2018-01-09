@@ -1,4 +1,7 @@
-import { TeventDispatcher } from '../../events/TeventDispatcher';
+/// <reference types="bluebird" />
+import * as turbine from "turbine";
+import Promise = require("bluebird");
+import TeventDispatcher = turbine.events.TeventDispatcher;
 export declare class TpluginsManager extends TeventDispatcher {
     logger: any;
     pluginsInstances: {};
@@ -14,6 +17,6 @@ export declare class TpluginsManager extends TeventDispatcher {
     freeAllPluginInstances(): void;
     savePlugin(plugin: any): void;
     createPluginsInstances(name: any): any;
-    getPlugin(name: any): any;
+    getPlugin(name: any): Promise<{}>;
     releaseInstance(instance: any): void;
 }

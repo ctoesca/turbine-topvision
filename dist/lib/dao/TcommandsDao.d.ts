@@ -1,4 +1,6 @@
-import { TdaoMysql } from '../../../dao/TdaoMysql';
+/// <reference types="bluebird" />
+import * as turbine from "turbine";
+import TdaoMysql = turbine.dao.TdaoMysql;
 import promise = require('bluebird');
 export declare class TcommandsDao extends TdaoMysql {
     constructor(objectClassName: any, datasource: any, config: any);

@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const TcrudServiceBase_1 = require("../../../TcrudServiceBase");
-class TserviceCommand extends TcrudServiceBase_1.TcrudServiceBase {
+const turbine = require("turbine");
+var TcrudServiceBase = turbine.TcrudServiceBase;
+class TserviceCommand extends TcrudServiceBase {
     constructor(config) {
         super(config);
     }

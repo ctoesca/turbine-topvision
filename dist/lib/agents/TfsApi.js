@@ -1,11 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const TeventDispatcher_1 = require("../../../events/TeventDispatcher");
-const tools = require("../../../tools");
+const turbine = require("turbine");
+var tools = turbine.tools;
+var TeventDispatcher = turbine.events.TeventDispatcher;
 const Promise = require("bluebird");
 const fs = require("fs");
 const request = require("request");
-class TfsApi extends TeventDispatcher_1.TeventDispatcher {
+class TfsApi extends TeventDispatcher {
     constructor(agent, config) {
         super();
         this.agent = agent;

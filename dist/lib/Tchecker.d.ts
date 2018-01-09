@@ -1,6 +1,7 @@
-import { TbaseService } from "../TbaseService";
-import { Ttimer } from "../../tools/Ttimer";
-import { ThttpServer } from "../HttpServer/ThttpServer";
+/// <reference types="express" />
+import * as turbine from "turbine";
+import Ttimer = turbine.tools.Ttimer;
+import ThttpServer = turbine.services.ThttpServer;
 import express = require('express');
 import { Tscheduler } from './Tscheduler';
 import { Tworker } from './Tworker';
@@ -8,7 +9,7 @@ import { TservicesDao } from './dao/TservicesDao';
 import { TagentsService } from './agents/TagentsService';
 import { TagentsEndpoint } from './agents/TagentsEndpoint';
 import { TserviceCommand } from './crudServices/TserviceCommand';
-export declare class Tchecker extends TbaseService {
+export declare class Tchecker extends turbine.services.TbaseService {
     app: express.Application;
     httpServer: ThttpServer;
     pluginsManager: any;

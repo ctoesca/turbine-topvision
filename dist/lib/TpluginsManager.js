@@ -1,11 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const turbine = require("turbine");
 const Promise = require("bluebird");
 const fs = require("fs");
-const TeventDispatcher_1 = require("../../events/TeventDispatcher");
+var TeventDispatcher = turbine.events.TeventDispatcher;
 const uuid = require("uuid");
 const shell = require("shelljs");
-class TpluginsManager extends TeventDispatcher_1.TeventDispatcher {
+class TpluginsManager extends TeventDispatcher {
     constructor(config) {
         super();
         this.pluginsInstances = {};

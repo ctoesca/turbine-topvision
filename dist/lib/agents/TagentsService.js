@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const Ttimer_1 = require("../../../tools/Ttimer");
-const TbaseService_1 = require("../../TbaseService");
+const turbine = require("turbine");
+var Ttimer = turbine.tools.Ttimer;
 const Tagent_1 = require("./Tagent");
 const TagentEvent_1 = require("./TagentEvent");
 const Promise = require("bluebird");
 const express = require("express");
-class TagentsService extends TbaseService_1.TbaseService {
+class TagentsService extends turbine.services.TbaseService {
     constructor(name, server, config) {
         super(name, config);
         this.agentsInstances = [];
@@ -16,8 +16,8 @@ class TagentsService extends TbaseService_1.TbaseService {
         this.app.get('/check', this.check.bind(this));
         this.httpServer.use(this.config.apiPath, this.app);
         this.dao = app.getDao("Agent");
-        this.monitoringTimer = new Ttimer_1.Ttimer({ delay: 30000 });
-        this.monitoringTimer.on(Ttimer_1.Ttimer.ON_TIMER, this.onMonitoringTimer, this);
+        this.monitoringTimer = new Ttimer({ delay: 30000 });
+        this.monitoringTimer.on(Ttimer.ON_TIMER, this.onMonitoringTimer, this);
     }
     createInstance(mixed, port, https) {
         if (typeof mixed == "object") {

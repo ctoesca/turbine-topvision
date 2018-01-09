@@ -1,5 +1,6 @@
-import { TeventDispatcher } from '../../events/TeventDispatcher';
-import { Ttimer } from '../../tools/Ttimer';
+import * as turbine from "turbine";
+import TeventDispatcher = turbine.events.TeventDispatcher;
+import Ttimer = turbine.tools.Ttimer;
 export declare class Tworker extends TeventDispatcher {
     redisClient: any;
     logger: any;

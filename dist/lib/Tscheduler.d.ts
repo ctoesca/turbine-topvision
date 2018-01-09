@@ -1,5 +1,8 @@
-import { TeventDispatcher } from '../../events/TeventDispatcher';
-import { Ttimer } from '../../tools/Ttimer';
+/// <reference types="bluebird" />
+import * as turbine from "turbine";
+import TeventDispatcher = turbine.events.TeventDispatcher;
+import Ttimer = turbine.tools.Ttimer;
+import Promise = require("bluebird");
 export declare class Tscheduler extends TeventDispatcher {
     scheduleTimer: Ttimer;
     saveTimer: Ttimer;
@@ -22,7 +25,7 @@ export declare class Tscheduler extends TeventDispatcher {
     setConfig(config: any): void;
     onScheduleTimer(): void;
     saveResults(): void;
-    getSaveQueueLength(): any;
+    getSaveQueueLength(): Promise<{}>;
     onSaveTimer(): void;
     onStatTimer(): void;
 }

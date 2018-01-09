@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const TeventDispatcher_1 = require("../../events/TeventDispatcher");
-const Ttimer_1 = require("../../tools/Ttimer");
+const turbine = require("turbine");
+var TeventDispatcher = turbine.events.TeventDispatcher;
+var Ttimer = turbine.tools.Ttimer;
 const Promise = require("bluebird");
-class Tscheduler extends TeventDispatcher_1.TeventDispatcher {
+class Tscheduler extends TeventDispatcher {
     constructor(config) {
         super();
         this.saving = false;
@@ -19,12 +20,12 @@ class Tscheduler extends TeventDispatcher_1.TeventDispatcher {
         this.logger.debug(this.constructor.name + " created");
         this.redisClient = app.ClusterManager.getClient();
         this.daoServices = app.getDao(this.daoClass);
-        this.statTimer = new Ttimer_1.Ttimer({ delay: this.config.statTimerInterval });
-        this.statTimer.on(Ttimer_1.Ttimer.ON_TIMER, this.onStatTimer, this);
-        this.scheduleTimer = new Ttimer_1.Ttimer({ delay: this.config.scheduleInterval });
-        this.scheduleTimer.on(Ttimer_1.Ttimer.ON_TIMER, this.onScheduleTimer, this);
-        this.saveTimer = new Ttimer_1.Ttimer({ delay: this.config.saveInterval });
-        this.saveTimer.on(Ttimer_1.Ttimer.ON_TIMER, this.onSaveTimer, this);
+        this.statTimer = new Ttimer({ delay: this.config.statTimerInterval });
+        this.statTimer.on(Ttimer.ON_TIMER, this.onStatTimer, this);
+        this.scheduleTimer = new Ttimer({ delay: this.config.scheduleInterval });
+        this.scheduleTimer.on(Ttimer.ON_TIMER, this.onScheduleTimer, this);
+        this.saveTimer = new Ttimer({ delay: this.config.saveInterval });
+        this.saveTimer.on(Ttimer.ON_TIMER, this.onSaveTimer, this);
     }
     start() {
         this.statTimer.start();

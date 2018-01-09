@@ -1,8 +1,12 @@
-import { TeventDispatcher } from '../../../events/TeventDispatcher';
+/// <reference types="bunyan" />
+/// <reference types="bluebird" />
+import * as turbine from "turbine";
+import TeventDispatcher = turbine.events.TeventDispatcher;
 import { TfsApi } from './TfsApi';
 import { ThttpApi } from './ThttpApi';
 import { TsshApi } from './TsshApi';
-import Logger = require("bunyan");
+import * as Logger from "bunyan";
+import Promise = require("bluebird");
 export declare class Tagent extends TeventDispatcher {
     data: any;
     httpConnectTimeout: number;
@@ -18,10 +22,10 @@ export declare class Tagent extends TeventDispatcher {
     host: any;
     save(): any;
     getUrl(): string;
-    stop(opt: any): any;
-    setConfig(data: any, options?: any): any;
-    getConfig(options?: any): any;
-    checkPort(host: any, port: any, opt: any): any;
-    check(): any;
-    _call(method: any, url: any, data: any, httpOptions?: any): any;
+    stop(opt: any): Promise<{}>;
+    setConfig(data: any, options?: any): Promise<{}>;
+    getConfig(options?: any): Promise<{}>;
+    checkPort(host: any, port: any, opt: any): Promise<{}>;
+    check(): Promise<{}>;
+    _call(method: any, url: any, data: any, httpOptions?: any): Promise<{}>;
 }

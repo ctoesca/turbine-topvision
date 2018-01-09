@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const TcrudRestEndpoint_1 = require("../../../rest/TcrudRestEndpoint");
-const tools = require("../../../tools");
+const turbine = require("turbine");
+var TcrudRestEndpoint = turbine.rest.TcrudRestEndpoint;
+var tools = turbine.tools;
 const url = require("url");
-class TagentsEndpoint extends TcrudRestEndpoint_1.TcrudRestEndpoint {
+class TagentsEndpoint extends TcrudRestEndpoint {
     constructor(config) {
         super(config);
         this.startDate = null;

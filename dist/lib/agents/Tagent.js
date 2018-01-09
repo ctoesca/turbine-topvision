@@ -1,16 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const TeventDispatcher_1 = require("../../../events/TeventDispatcher");
-const Tevent_1 = require("../../../events/Tevent");
+const turbine = require("turbine");
+var TeventDispatcher = turbine.events.TeventDispatcher;
+var Tevent = turbine.events.Tevent;
 const TfsApi_1 = require("./TfsApi");
 const ThttpApi_1 = require("./ThttpApi");
 const TsshApi_1 = require("./TsshApi");
 const TagentEvent_1 = require("./TagentEvent");
-const tools = require("../../../tools");
-const TcrudServiceBase_1 = require("../../../TcrudServiceBase");
+var tools = turbine.tools;
+var TcrudServiceBase = turbine.TcrudServiceBase;
 const Promise = require("bluebird");
 const request = require("request");
-class Tagent extends TeventDispatcher_1.TeventDispatcher {
+class Tagent extends TeventDispatcher {
     constructor(data) {
         super();
         this.httpConnectTimeout = 5000;
@@ -19,7 +20,7 @@ class Tagent extends TeventDispatcher_1.TeventDispatcher {
         this.fs = new TfsApi_1.TfsApi(this, {});
         this.http = new ThttpApi_1.ThttpApi(this, {});
         this.ssh = new TsshApi_1.TsshApi(this, {});
-        this.dataService = new TcrudServiceBase_1.TcrudServiceBase({
+        this.dataService = new TcrudServiceBase({
             model: {
                 "name": "Agent",
                 IDField: "id",
@@ -139,7 +140,7 @@ class Tagent extends TeventDispatcher_1.TeventDispatcher {
                     this.logger.debug("Tagent._call url=" + opt.url + " : " + err.toString());
                     err = new Error("Echec appel de l'agent " + this.name + ": " + err.toString());
                     req.abort();
-                    var evt = new Tevent_1.Tevent(TagentEvent_1.TagentEvent.FAILURE, err);
+                    var evt = new Tevent(TagentEvent_1.TagentEvent.FAILURE, err);
                     this.dispatchEvent(evt);
                     if (evt.data.retryWith && _httpOptions.retryOnOtherAgents) {
                         this.logger.debug("!!! RETRY WITH AGENT ", evt.data.retryWith.name);
@@ -162,7 +163,7 @@ class Tagent extends TeventDispatcher_1.TeventDispatcher {
                             err = new Error("Echec appel de l'agent " + this.name + ": statusCode=" + response.statusCode + ", body=" + body);
                         else
                             err = new Error("Echec appel de l'agent " + this.name + ": statusCode=" + response.statusCode + ", body=" + JSON.stringify(body));
-                        evt = new Tevent_1.Tevent(TagentEvent_1.TagentEvent.FAILURE, err);
+                        evt = new Tevent(TagentEvent_1.TagentEvent.FAILURE, err);
                         this.dispatchEvent(evt);
                         reject(err);
                     }

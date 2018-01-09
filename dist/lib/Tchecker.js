@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const TbaseService_1 = require("../TbaseService");
-const Ttimer_1 = require("../../tools/Ttimer");
+const turbine = require("turbine");
+var Ttimer = turbine.tools.Ttimer;
 const Promise = require("bluebird");
 const bodyParser = require("body-parser");
 const express = require("express");
@@ -13,7 +13,7 @@ const TcommandsDao_1 = require("./dao/TcommandsDao");
 const TagentsService_1 = require("./agents/TagentsService");
 const TagentsEndpoint_1 = require("./agents/TagentsEndpoint");
 const TserviceCommand_1 = require("./crudServices/TserviceCommand");
-class Tchecker extends TbaseService_1.TbaseService {
+class Tchecker extends turbine.services.TbaseService {
     constructor(name, server, config) {
         super(name, config);
         this.statTimerIterval = 2;
@@ -50,8 +50,8 @@ class Tchecker extends TbaseService_1.TbaseService {
         this.scheduler.pubSubServer = this.pubSubServer;
         this.worker = new Tworker_1.Tworker(this.config.worker, this.pluginsManager);
         this.worker.pubSubServer = this.pubSubServer;
-        this.statTimer = new Ttimer_1.Ttimer({ delay: this.statTimerIterval * 1000 });
-        this.statTimer.on(Ttimer_1.Ttimer.ON_TIMER, this.onStatTimer, this);
+        this.statTimer = new Ttimer({ delay: this.statTimerIterval * 1000 });
+        this.statTimer.on(Ttimer.ON_TIMER, this.onStatTimer, this);
         this.subscribeClient = app.ClusterManager.getNewClient();
         this.subscribeClient.on("subscribe", function (channel, count) {
             this.logger.info("subscribe success to " + channel);

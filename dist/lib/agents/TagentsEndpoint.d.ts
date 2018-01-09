@@ -1,4 +1,5 @@
-import { TcrudRestEndpoint } from '../../../rest/TcrudRestEndpoint';
+import * as turbine from "turbine";
+import TcrudRestEndpoint = turbine.rest.TcrudRestEndpoint;
 import { TagentsService } from './TagentsService';
 export declare class TagentsEndpoint extends TcrudRestEndpoint {
     startDate: any;

@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const TdaoMysql_1 = require("../../../dao/TdaoMysql");
+const turbine = require("turbine");
+var TdaoMysql = turbine.dao.TdaoMysql;
 const moment = require("moment");
-class TservicesDao extends TdaoMysql_1.TdaoMysql {
+class TservicesDao extends TdaoMysql {
     constructor(objectClassName, datasource, config) {
         super(objectClassName, datasource, config);
         this.daoCommands = app.getDao("Command");

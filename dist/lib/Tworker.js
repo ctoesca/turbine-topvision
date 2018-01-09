@@ -1,11 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const TeventDispatcher_1 = require("../../events/TeventDispatcher");
-const Ttimer_1 = require("../../tools/Ttimer");
-const tools = require("../../tools");
+const turbine = require("turbine");
+var TeventDispatcher = turbine.events.TeventDispatcher;
+var Ttimer = turbine.tools.Ttimer;
+var tools = turbine.tools;
 const osUtils = require("os-utils");
 const os = require("os");
-class Tworker extends TeventDispatcher_1.TeventDispatcher {
+class Tworker extends TeventDispatcher {
     constructor(config, pluginsManager) {
         super();
         this.daoClass = "Service";
@@ -21,10 +22,10 @@ class Tworker extends TeventDispatcher_1.TeventDispatcher {
         this.logger.info("******* Tworker.config.maxConcurrentRequests = " + this.config.maxConcurrentRequests);
         this.redisClient = app.ClusterManager.getClient();
         this.daoServices = app.getDao(this.daoClass);
-        this.statTimer = new Ttimer_1.Ttimer({ delay: this.config.statTimerInterval });
-        this.statTimer.on(Ttimer_1.Ttimer.ON_TIMER, this.onStatTimer, this);
-        this.workTimer = new Ttimer_1.Ttimer({ delay: this.config.workInterval });
-        this.workTimer.on(Ttimer_1.Ttimer.ON_TIMER, this.onWorkTimer, this);
+        this.statTimer = new Ttimer({ delay: this.config.statTimerInterval });
+        this.statTimer.on(Ttimer.ON_TIMER, this.onStatTimer, this);
+        this.workTimer = new Ttimer({ delay: this.config.workInterval });
+        this.workTimer.on(Ttimer.ON_TIMER, this.onWorkTimer, this);
     }
     setConfig(config) {
         if ((config.maxSamePluginInstances) && (config.maxSamePluginInstances != this.config.maxSamePluginInstances)) {

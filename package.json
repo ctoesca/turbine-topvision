@@ -17,7 +17,8 @@
     "url": "git+https://github.com/ctoesca/turbine-topvision"
   },
   "keywords": [
-    "turbine","topvision"
+    "turbine",
+    "topvision"
   ],
   "author": "Christophe Toesca <christophe.toesca@gmail.com>",
   "license": "ISC",
@@ -43,7 +44,8 @@
     "typescript": "^2.1.4"
   },
   "dependencies": {
-    "turbine": "git+https://github.com/ctoesca/turbine.git",
-    "bluebird": "^3.5.1"
+    "bluebird": "^3.5.1",
+    "os-utils": "0.0.14",
+    "turbine": "git+https://github.com/ctoesca/turbine.git"
   }
 }
