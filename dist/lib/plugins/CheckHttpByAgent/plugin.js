@@ -16,8 +16,8 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
 	}
 	
 	getAgent(args){
-	    return null;
-		return app.getService("agentsService").getAgentForHost("127.0.0.1", 8090).then( function(agent){
+	    
+		return app.getService("checker").agentsService.getAgentForHost("127.0.0.1", 8090).then( function(agent){
 		    if (agent == null)
 		        throw "Aucun agent disponible n'accède à 127.0.0.1:8090"
 		    else
@@ -91,7 +91,7 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
             }.bind(this))
         }.bind(this))
         .catch(function(err){
-            error(err.toString())
+            error(err)
         })
 	}
     savePerfdata( result, service){
@@ -200,6 +200,8 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
     			r.exitCode = 2;
     		}else
     		{
+    		    r.output = "OK: "+r.output
+    		    
     	        r.exitCode = 0;
     		}
     		
@@ -210,6 +212,12 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
 	
 
 }
+
+
+
+
+
+
 
 
 

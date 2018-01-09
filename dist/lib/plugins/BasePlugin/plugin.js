@@ -1,14 +1,12 @@
 "use strict";
 
-const turbine = require("turbine")
-const TeventDispatcher = turbine.events.TeventDispatcher;
+const TeventDispatcher = require("../../../../events/TeventDispatcher").TeventDispatcher;
 
 module.exports = class BasePlugin extends TeventDispatcher {
 
 	constructor( opt ){
 		super( opt );
 		this.opt = opt;
-	
 		this.running = false;
 		this.timeout = null;
 		this.logger = app.getLogger(this.constructor.name);

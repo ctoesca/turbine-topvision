@@ -24,13 +24,12 @@ module.exports = class CheckElastic extends CheckHttpByAgent {
     processSuccess(args, result, startTime)
 	{
 		var r = super.processSuccess(args, result, startTime)
-	
-		if (result.status < 400 )
+
+		if (!result.isError && (result.status < 400 ))
 		{
 		    try{
     		    var data = JSON.parse(result.result)
     		   
-        		    
             	if (data.status == "green"){
                     r.exitCode = 0;
             	}
@@ -58,6 +57,9 @@ module.exports = class CheckElastic extends CheckHttpByAgent {
 	}
 
 }
+
+
+
 
 
 
