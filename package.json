@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "bluebird": "^3.5.1",
+    "elasticsearch": "^14.0.0",
     "os-utils": "0.0.14",
     "turbine": "git+https://github.com/ctoesca/turbine.git"
   }
