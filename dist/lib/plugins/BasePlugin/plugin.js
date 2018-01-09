@@ -1,6 +1,7 @@
 "use strict";
+const turbine = require("turbine")
 
-const TeventDispatcher = require("../../../../events/TeventDispatcher").TeventDispatcher;
+const TeventDispatcher = turbine.events.TeventDispatcher;
 
 module.exports = class BasePlugin extends TeventDispatcher {
 
