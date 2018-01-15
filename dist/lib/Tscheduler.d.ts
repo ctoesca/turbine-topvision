@@ -3,6 +3,7 @@ import * as turbine from "turbine";
 import TeventDispatcher = turbine.events.TeventDispatcher;
 import Ttimer = turbine.tools.Ttimer;
 import Promise = require("bluebird");
+import { PubSubServer } from 'turbine-pubsub';
 export declare class Tscheduler extends TeventDispatcher {
     scheduleTimer: Ttimer;
     saveTimer: Ttimer;
@@ -18,7 +19,7 @@ export declare class Tscheduler extends TeventDispatcher {
     config: any;
     savingResults: boolean;
     resultsCount: number;
-    pubSubServer: any;
+    pubSubServer: PubSubServer;
     constructor(config: any);
     start(): void;
     stop(): void;

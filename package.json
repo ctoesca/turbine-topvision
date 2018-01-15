@@ -41,12 +41,14 @@
     "run-sequence": "^1.2.2",
     "sinon": "^1.17.6",
     "tslint": "^4.0.2",
-    "typescript": "^2.1.4"
+    "typescript": "^2.1.4",
+    "typedoc": "^0.3.12"
   },
   "dependencies": {
     "bluebird": "^3.5.1",
     "elasticsearch": "^14.0.0",
     "os-utils": "0.0.14",
-    "turbine": "git+https://github.com/ctoesca/turbine.git"
+    "turbine": "git+https://github.com/ctoesca/turbine.git",
+    "turbine-pubsub": "git+https://github.com/ctoesca/turbine-pubsub.git"
   }
 }

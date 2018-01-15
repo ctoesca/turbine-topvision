@@ -1,6 +1,7 @@
 import * as turbine from "turbine";
 import TeventDispatcher = turbine.events.TeventDispatcher;
 import Ttimer = turbine.tools.Ttimer;
+import { PubSubServer } from 'turbine-pubsub';
 export declare class Tworker extends TeventDispatcher {
     redisClient: any;
     logger: any;
@@ -15,7 +16,7 @@ export declare class Tworker extends TeventDispatcher {
     statTimer: Ttimer;
     workTimer: Ttimer;
     requestRate: any;
-    pubSubServer: any;
+    pubSubServer: PubSubServer;
     constructor(config: any, pluginsManager: any);
     setConfig(config: any): void;
     start(): void;

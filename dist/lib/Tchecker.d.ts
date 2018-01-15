@@ -9,6 +9,7 @@ import { TservicesDao } from './dao/TservicesDao';
 import { TagentsService } from './agents/TagentsService';
 import { TagentsEndpoint } from './agents/TagentsEndpoint';
 import { TserviceCommand } from './crudServices/TserviceCommand';
+import { PubSubServer } from 'turbine-pubsub';
 export declare class Tchecker extends turbine.services.TbaseService {
     app: express.Application;
     httpServer: ThttpServer;
@@ -22,7 +23,7 @@ export declare class Tchecker extends turbine.services.TbaseService {
     worker: Tworker;
     lastStat: any;
     requestRate: number;
-    pubSubServer: any;
+    pubSubServer: PubSubServer;
     agentsService: TagentsService;
     static test(): void;
     constructor(name: any, server: any, config: any);
