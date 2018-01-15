@@ -9,7 +9,7 @@ import { TservicesDao } from './dao/TservicesDao';
 import { TagentsService } from './agents/TagentsService';
 import { TagentsEndpoint } from './agents/TagentsEndpoint';
 import { TserviceCommand } from './crudServices/TserviceCommand';
-import { PubSubServer } from 'turbine-pubsub';
+import PubSubServer from 'turbine-pubsub';
 export declare class Tchecker extends turbine.services.TbaseService {
     app: express.Application;
     httpServer: ThttpServer;
