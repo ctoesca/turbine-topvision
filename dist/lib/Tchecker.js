@@ -10,6 +10,7 @@ const Tworker_1 = require("./Tworker");
 const TpluginsManager_1 = require("./TpluginsManager");
 const TservicesDao_1 = require("./dao/TservicesDao");
 const TcommandsDao_1 = require("./dao/TcommandsDao");
+const TagentsDao_1 = require("./dao/TagentsDao");
 const TagentsService_1 = require("./agents/TagentsService");
 const TagentsEndpoint_1 = require("./agents/TagentsEndpoint");
 const TserviceCommand_1 = require("./crudServices/TserviceCommand");
@@ -20,6 +21,8 @@ class Tchecker extends turbine.services.TbaseService {
         this.lastStat = null;
         this.requestRate = 0;
         this.pubSubServer = null;
+        for (var model in this.getModels())
+            app.registerModel(model);
         this.httpServer = server;
         this.app = express();
         this.pubSubServer = config.pubSubServer;
@@ -38,8 +41,6 @@ class Tchecker extends turbine.services.TbaseService {
         this.app.head('/', this.head.bind(this));
         this.app.get('/', this.test.bind(this));
         this.httpServer.use(this.config.apiPath, this.app);
-        app.config.models.Service.dao.class = TservicesDao_1.TservicesDao;
-        app.config.models.Command.dao.class = TcommandsDao_1.TcommandsDao;
         this.daoServices = app.getDao("Service");
         app.ClusterManager.on("ISMASTER_CHANGED", this.onIsMasterChanged, this);
         this.redisClient = app.ClusterManager.getClient();
@@ -64,11 +65,60 @@ class Tchecker extends turbine.services.TbaseService {
     static test() {
         app.logger.error("Appel methode statique");
     }
-    static getCommandsServiceClass() {
-        return TserviceCommand_1.TserviceCommand;
-    }
-    static getAgentsEndPointClass() {
-        return TagentsEndpoint_1.TagentsEndpoint;
+    getModels() {
+        return {
+            "Service": {
+                "name": "Service",
+                IDField: "id",
+                "dao": {
+                    "class": TservicesDao_1.TservicesDao,
+                    "daoConfig": {
+                        datasource: "topvision",
+                        tableName: "services",
+                        viewName: "view_services"
+                    }
+                },
+                "entryPoint": {
+                    path: "/services",
+                    class: turbine.rest.TcrudRestEndpoint,
+                    serviceClass: turbine.TcrudServiceBase
+                }
+            },
+            "Command": {
+                "name": "Command",
+                IDField: "id",
+                "dao": {
+                    "class": TcommandsDao_1.TcommandsDao,
+                    "daoConfig": {
+                        datasource: "topvision",
+                        tableName: "commands",
+                        viewName: "commands"
+                    }
+                },
+                "entryPoint": {
+                    path: "/commands",
+                    class: turbine.rest.TcrudRestEndpoint,
+                    serviceClass: TserviceCommand_1.TserviceCommand
+                }
+            },
+            "Agent": {
+                "name": "Agent",
+                IDField: "id",
+                "dao": {
+                    "class": TagentsDao_1.TagentsDao,
+                    "daoConfig": {
+                        datasource: "topvision",
+                        tableName: "agents",
+                        viewName: "agents"
+                    }
+                },
+                "entryPoint": {
+                    path: "/agents",
+                    class: turbine.rest.TcrudRestEndpoint,
+                    serviceClass: TagentsEndpoint_1.TagentsEndpoint
+                }
+            }
+        };
     }
     check(req, res) {
         res.status(200).send(req.user);

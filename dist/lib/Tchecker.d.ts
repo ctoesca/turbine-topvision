@@ -7,8 +7,6 @@ import { Tscheduler } from './Tscheduler';
 import { Tworker } from './Tworker';
 import { TservicesDao } from './dao/TservicesDao';
 import { TagentsService } from './agents/TagentsService';
-import { TagentsEndpoint } from './agents/TagentsEndpoint';
-import { TserviceCommand } from './crudServices/TserviceCommand';
 import PubSubServer from 'turbine-pubsub';
 export declare class Tchecker extends turbine.services.TbaseService {
     app: express.Application;
@@ -27,8 +25,7 @@ export declare class Tchecker extends turbine.services.TbaseService {
     agentsService: TagentsService;
     static test(): void;
     constructor(name: any, server: any, config: any);
-    static getCommandsServiceClass(): typeof TserviceCommand;
-    static getAgentsEndPointClass(): typeof TagentsEndpoint;
+    getModels(): any;
     check(req: any, res: any): void;
     getDefaultConfig(): {
         "active": boolean;
