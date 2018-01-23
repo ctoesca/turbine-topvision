@@ -21,8 +21,9 @@ class Tchecker extends turbine.services.TbaseService {
         this.lastStat = null;
         this.requestRate = 0;
         this.pubSubServer = null;
-        for (var model in this.getModels())
-            app.registerModel(model);
+        var models = this.getModels();
+        for (var modelName in models)
+            app.registerModel(models[modelName]);
         this.httpServer = server;
         this.app = express();
         this.pubSubServer = config.pubSubServer;
