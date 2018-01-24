@@ -6,17 +6,17 @@ const elasticsearch = require('elasticsearch');
 const moment = require("moment");
 
 module.exports = class CheckHttpByAgent extends BasePlugin {
-
+ 
 	constructor( opt ){
 		super( opt );
-		this.elasticClient = new elasticsearch.Client({
+		/*this.elasticClient = new elasticsearch.Client({
 		  host: 'localhost:9200',
 		  log: 'info'
-		});
+		});*/
 	}
-	
+	 
 	getAgent(args){
-	    
+	     
 		return app.getService("checker").agentsService.getAgentForHost("127.0.0.1", 8090).then( function(agent){
 		    if (agent == null)
 		        throw "Aucun agent disponible n'accède à 127.0.0.1:8090"
@@ -212,6 +212,11 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
 	
 
 }
+
+
+
+
+
 
 
 
