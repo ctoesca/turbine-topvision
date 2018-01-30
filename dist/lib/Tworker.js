@@ -14,7 +14,6 @@ class Tworker extends TeventDispatcher {
         this.totalRequestsCount = 0;
         this.totalRequestsCompletedCount = 0;
         this.lastStat = null;
-        this.pubSubServer = null;
         this.config = config;
         this.pluginsManager = pluginsManager;
         this.logger = app.getLogger(this.constructor.name);

@@ -14,7 +14,6 @@ class Tscheduler extends TeventDispatcher {
         this.lastStat = null;
         this.savingResults = false;
         this.resultsCount = 0;
-        this.pubSubServer = null;
         this.config = config;
         this.logger = app.getLogger(this.constructor.name);
         this.logger.debug(this.constructor.name + " created");

@@ -10,8 +10,8 @@ const Tworker_1 = require("./Tworker");
 const TpluginsManager_1 = require("./TpluginsManager");
 const TservicesDao_1 = require("./dao/TservicesDao");
 const TcommandsDao_1 = require("./dao/TcommandsDao");
-const TagentsDao_1 = require("./dao/TagentsDao");
 const TagentsService_1 = require("./agents/TagentsService");
+const TagentsDao_1 = require("./dao/TagentsDao");
 const TagentsEndpoint_1 = require("./agents/TagentsEndpoint");
 const TserviceCommand_1 = require("./crudServices/TserviceCommand");
 class Tchecker extends turbine.services.TbaseService {
@@ -20,13 +20,12 @@ class Tchecker extends turbine.services.TbaseService {
         this.statTimerIterval = 2;
         this.lastStat = null;
         this.requestRate = 0;
-        this.pubSubServer = null;
-        var models = this.getModels();
-        for (var modelName in models)
-            app.registerModel(models[modelName]);
         this.httpServer = server;
         this.app = express();
         this.pubSubServer = config.pubSubServer;
+        var models = this.getModels();
+        for (var modelName in models)
+            app.registerModel(models[modelName]);
         this.app.use(bodyParser.json({
             limit: '50mb'
         }));
