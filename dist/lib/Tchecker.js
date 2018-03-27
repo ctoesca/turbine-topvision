@@ -12,7 +12,6 @@ const TservicesDao_1 = require("./dao/TservicesDao");
 const TcommandsDao_1 = require("./dao/TcommandsDao");
 const TagentsService_1 = require("./agents/TagentsService");
 const TagentsDao_1 = require("./dao/TagentsDao");
-const TagentsEndpoint_1 = require("./agents/TagentsEndpoint");
 const TserviceCommand_1 = require("./crudServices/TserviceCommand");
 class Tchecker extends turbine.services.TbaseService {
     constructor(name, server, config) {
@@ -115,7 +114,7 @@ class Tchecker extends turbine.services.TbaseService {
                 "entryPoint": {
                     path: "/agents",
                     class: turbine.rest.TcrudRestEndpoint,
-                    serviceClass: TagentsEndpoint_1.TagentsEndpoint
+                    serviceClass: turbine.TcrudServiceBase
                 }
             }
         };
