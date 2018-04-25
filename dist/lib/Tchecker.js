@@ -78,7 +78,7 @@ class Tchecker extends turbine.services.TbaseService {
                     }
                 },
                 "entryPoint": {
-                    path: "/services",
+                    path: "/api/services",
                     class: turbine.rest.TcrudRestEndpoint,
                     serviceClass: turbine.TcrudServiceBase
                 }
@@ -95,7 +95,7 @@ class Tchecker extends turbine.services.TbaseService {
                     }
                 },
                 "entryPoint": {
-                    path: "/commands",
+                    path: "/api/commands",
                     class: turbine.rest.TcrudRestEndpoint,
                     serviceClass: TserviceCommand_1.TserviceCommand
                 }
@@ -112,7 +112,7 @@ class Tchecker extends turbine.services.TbaseService {
                     }
                 },
                 "entryPoint": {
-                    path: "/agents",
+                    path: "/api/agents",
                     class: turbine.rest.TcrudRestEndpoint,
                     serviceClass: turbine.TcrudServiceBase
                 }
