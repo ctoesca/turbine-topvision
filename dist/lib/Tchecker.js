@@ -24,7 +24,7 @@ class Tchecker extends turbine.services.TbaseService {
         this.pubSubServer = config.pubSubServer;
         var models = this.getModels();
         for (var modelName in models)
-            app.registerModel(models[modelName]);
+            app.registerModel(modelName, models[modelName]);
         this.app.use(bodyParser.json({
             limit: '50mb'
         }));
