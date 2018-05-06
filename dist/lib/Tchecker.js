@@ -40,7 +40,6 @@ class Tchecker extends turbine.services.TbaseService {
         this.app.head('/', this.head.bind(this));
         this.app.get('/', this.test.bind(this));
         this.httpServer.use(this.config.apiPath, this.app);
-        this.daoServices = app.getDao("Service");
         app.ClusterManager.on("ISMASTER_CHANGED", this.onIsMasterChanged, this);
         this.redisClient = app.ClusterManager.getClient();
         this.pluginsManager = new TpluginsManager_1.TpluginsManager({
@@ -67,11 +66,10 @@ class Tchecker extends turbine.services.TbaseService {
     getModels() {
         return {
             "Service": {
-                "name": "Service",
                 IDField: "id",
                 "dao": {
                     "class": TservicesDao_1.TservicesDao,
-                    "daoConfig": {
+                    "config": {
                         datasource: "topvision",
                         tableName: "services",
                         viewName: "view_services"
@@ -84,11 +82,10 @@ class Tchecker extends turbine.services.TbaseService {
                 }
             },
             "Command": {
-                "name": "Command",
                 IDField: "id",
                 "dao": {
                     "class": TcommandsDao_1.TcommandsDao,
-                    "daoConfig": {
+                    "config": {
                         datasource: "topvision",
                         tableName: "commands",
                         viewName: "commands"
@@ -101,11 +98,10 @@ class Tchecker extends turbine.services.TbaseService {
                 }
             },
             "Agent": {
-                "name": "Agent",
                 IDField: "id",
                 "dao": {
                     "class": TagentsDao_1.TagentsDao,
-                    "daoConfig": {
+                    "config": {
                         datasource: "topvision",
                         tableName: "agents",
                         viewName: "agents"
@@ -146,17 +142,21 @@ class Tchecker extends turbine.services.TbaseService {
     }
     start() {
         if (this.active) {
-            this.worker.start();
-            this.statTimer.start();
-            this.lastStat = null;
-            this.requestRate = 0;
-            if (!this.agentsService) {
-                this.agentsService = new TagentsService_1.TagentsService("agentsService", this.httpServer, {
-                    apiPath: this.config.apiPath + "/agents_service"
-                });
-            }
-            this.agentsService.start();
-            super.start();
+            app.getDao("Service")
+                .then((dao) => {
+                this.daoServices = dao;
+                this.worker.start();
+                this.statTimer.start();
+                this.lastStat = null;
+                this.requestRate = 0;
+                if (!this.agentsService) {
+                    this.agentsService = new TagentsService_1.TagentsService("agentsService", this.httpServer, {
+                        apiPath: this.config.apiPath + "/agents_service"
+                    });
+                }
+                this.agentsService.start();
+                super.start();
+            });
         }
     }
     stop() {
@@ -196,7 +196,7 @@ class Tchecker extends turbine.services.TbaseService {
     }
     onIsMasterChanged(e) {
         this.logger.info("ISMASTER_CHANGED (process PID=" + process.pid + ", worker=" + process.pid + ") => " + e.data);
-        if (e.data) {
+        if (e.data && this.config.active) {
             this.daoServices.reset().then(function (result) {
                 if (this.active)
                     this.scheduler.start();

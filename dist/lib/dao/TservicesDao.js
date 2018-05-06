@@ -2,11 +2,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const turbine = require("turbine");
 var TdaoMysql = turbine.dao.TdaoMysql;
+const Promise = require("bluebird");
 const moment = require("moment");
 class TservicesDao extends TdaoMysql {
     constructor(objectClassName, datasource, config) {
         super(objectClassName, datasource, config);
-        this.daoCommands = app.getDao("Command");
+        app.getDao("Command")
+            .then((dao) => {
+            this.daoCommands = dao;
+        });
     }
     reset() {
         return this.queryTransaction("UPDATE services SET scheduled=0");
@@ -50,19 +54,23 @@ class TservicesDao extends TdaoMysql {
                     this.logger.error("Echec parse service.args (ID=" + obj.id + ") '" + obj.args + "' : " + err);
                 }
             }
-            commandsPromises.push(this.setCommand(obj));
+            commandsPromises.push(this.getCommand(obj));
         }
-        return Promise.all(commandsPromises);
+        return Promise.all(commandsPromises)
+            .then((commands) => {
+            for (var i = 0; i < objects.length; i++)
+                objects[i].command = commands[i];
+            return objects;
+        });
     }
-    setCommand(service) {
-        if (service.id_command) {
-            return this.daoCommands.getById(service.id_command).then(function (command) {
-                service.command = command;
-                return service;
+    getCommand(obj) {
+        if (obj.id_command) {
+            return this.daoCommands.getById(obj.id_command).then(function (command) {
+                return command;
             });
         }
         else {
-            return service;
+            return null;
         }
     }
     saveServices(services) {
