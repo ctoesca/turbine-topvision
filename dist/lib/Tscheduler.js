@@ -18,7 +18,9 @@ class Tscheduler extends TeventDispatcher {
         this.logger = app.getLogger(this.constructor.name);
         this.logger.debug(this.constructor.name + " created");
         this.redisClient = app.ClusterManager.getClient();
-        this.daoServices = app.getDao(this.daoClass);
+        app.getDao(this.daoClass).then((dao) => {
+            this.daoServices = dao;
+        });
         this.statTimer = new Ttimer({ delay: this.config.statTimerInterval });
         this.statTimer.on(Ttimer.ON_TIMER, this.onStatTimer, this);
         this.scheduleTimer = new Ttimer({ delay: this.config.scheduleInterval });
@@ -42,8 +44,10 @@ class Tscheduler extends TeventDispatcher {
         for (var k in config)
             this.config[k] = config[k];
         this.statTimer.delay = this.config.statTimerInterval;
+        this.statTimer.reset();
         this.scheduleTimer.delay = this.config.scheduleInterval;
         this.saveTimer.delay = this.config.saveInterval;
+        this.saveTimer.reset();
         if (app.ClusterManager.isClusterMaster && this.pubSubServer)
             this.pubSubServer.broadcast({ type: 'publish', channel: "topvision.checker.scheduler.config", payload: this.config });
     }
@@ -265,7 +269,7 @@ class Tscheduler extends TeventDispatcher {
                             }
                             payload.data.checkRate = Math.round(payload.data.checkRate * 10) / 10;
                             if (this.pubSubServer) {
-                                this.pubSubServer.broadcast({ type: 'publish', channel: "strongbox.checker.stats", payload: payload });
+                                this.pubSubServer.broadcast({ type: 'publish', channel: "topvision.checker.stats", payload: payload });
                             }
                         }.bind(this));
                     }.bind(this));

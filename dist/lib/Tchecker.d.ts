@@ -1,4 +1,3 @@
-/// <reference types="express" />
 import * as turbine from "turbine";
 import Ttimer = turbine.tools.Ttimer;
 import ThttpServer = turbine.services.ThttpServer;

@@ -1,4 +1,3 @@
-/// <reference types="bluebird" />
 import * as turbine from "turbine";
 import TdaoMysql = turbine.dao.TdaoMysql;
 import { TcommandsDao } from './TcommandsDao';
@@ -11,6 +10,6 @@ export declare class TservicesDao extends TdaoMysql {
     getServicesToCheck(opt: any): Promise<any>;
     processObjects(objects: any, fields: any): Promise<any>;
     getCommand(obj: any): Promise<any>;
-    saveServices(services: any): Promise<{}>;
+    saveServices(services: any): Promise<any>;
     setScheduled(idList: any, value: any): Promise<{}>;
 }

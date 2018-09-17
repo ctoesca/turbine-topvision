@@ -15,7 +15,7 @@ module.exports = class Sleep extends BasePlugin {
 	    setTimeout( function(){
 	       var duree = (new Date() - start)/1000
 	       success({
-	            output: "attente terminée avc succes. duree="+duree+" sec",
+	            output: "!! attente terminée avc succes. duree="+duree+" sec",
 	            exitCode: 0
 	       })
 	    }, args.duree)
@@ -25,6 +25,8 @@ module.exports = class Sleep extends BasePlugin {
 	
 
 }
+
+
 
 
 

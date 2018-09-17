@@ -1,5 +1,3 @@
-/// <reference types="bunyan" />
-/// <reference types="bluebird" />
 import * as turbine from "turbine";
 import TeventDispatcher = turbine.events.TeventDispatcher;
 import { TfsApi } from './TfsApi';

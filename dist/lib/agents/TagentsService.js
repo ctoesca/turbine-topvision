@@ -15,7 +15,10 @@ class TagentsService extends turbine.services.TbaseService {
         this.app = express();
         this.app.get('/check', this.check.bind(this));
         this.httpServer.use(this.config.apiPath, this.app);
-        this.dao = app.getDao("Agent");
+        app.getDao("Agent")
+            .then((dao) => {
+            this.dao = dao;
+        });
         this.monitoringTimer = new Ttimer({ delay: 30000 });
         this.monitoringTimer.on(Ttimer.ON_TIMER, this.onMonitoringTimer, this);
     }
@@ -139,6 +142,15 @@ class TagentsService extends turbine.services.TbaseService {
                 return null;
             }
         }.bind(this));
+    }
+    getByHost(host) {
+        return this.dao.getByHost(host)
+            .then(function (result) {
+            if (result != null)
+                return new Tagent_1.Tagent(result);
+            else
+                return null;
+        });
     }
     getAgentByHostAndPort(host, port) {
         return this.dao.getByHostAndPort(host, port)

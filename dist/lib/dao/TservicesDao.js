@@ -74,8 +74,8 @@ class TservicesDao extends TdaoMysql {
         }
     }
     saveServices(services) {
+        var SQL = "";
         try {
-            var SQL = "";
             for (var i = 0; i < services.length; i++) {
                 var service = services[i];
                 SQL += "UPDATE services SET ";
@@ -85,7 +85,7 @@ class TservicesDao extends TdaoMysql {
                     SQL += ",previous_check='" + moment(service.previous_check).format("YYYY-MM-DD HH:mm:ss") + "'";
                 SQL += ",ellapsed='" + service.ellapsed + "'";
                 if (service.perfdata)
-                    SQL += ",perfdata='" + JSON.stringify(service.perfdata) + "'";
+                    SQL += ",perfdata=" + this.escapeSqlString(JSON.stringify(service.perfdata));
                 if (typeof service.output != "undefined")
                     SQL += ",output=" + this.escapeSqlString(service.output);
                 else

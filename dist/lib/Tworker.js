@@ -20,7 +20,10 @@ class Tworker extends TeventDispatcher {
         this.logger.debug(this.constructor.name + " created: opt=", this.config);
         this.logger.info("******* Tworker.config.maxConcurrentRequests = " + this.config.maxConcurrentRequests);
         this.redisClient = app.ClusterManager.getClient();
-        this.daoServices = app.getDao(this.daoClass);
+        app.getDao(this.daoClass)
+            .then((dao) => {
+            this.daoServices = dao;
+        });
         this.statTimer = new Ttimer({ delay: this.config.statTimerInterval });
         this.statTimer.on(Ttimer.ON_TIMER, this.onStatTimer, this);
         this.workTimer = new Ttimer({ delay: this.config.workInterval });
@@ -29,13 +32,15 @@ class Tworker extends TeventDispatcher {
     setConfig(config) {
         if ((config.maxSamePluginInstances) && (config.maxSamePluginInstances != this.config.maxSamePluginInstances)) {
             this.config.maxSamePluginInstances = config.maxSamePluginInstances;
-            this.pluginsManager.maxSamePluginInstances = this.config.maxSamePluginInstances;
+            this.pluginsManager.config.maxSamePluginInstances = this.config.maxSamePluginInstances;
             this.pluginsManager.freeAllPluginInstances();
         }
         for (var k in config)
             this.config[k] = config[k];
         this.statTimer.delay = this.config.statTimerInterval;
+        this.statTimer.reset();
         this.workTimer.delay = this.config.workInterval;
+        this.workTimer.reset();
         this.logger.info("UPDATE CONFIG", config);
         if (app.ClusterManager.isClusterMaster && this.pubSubServer)
             this.pubSubServer.broadcast({ type: 'publish', channel: "topvision.checker.workers.config", payload: this.config });
@@ -53,7 +58,7 @@ class Tworker extends TeventDispatcher {
             this.logger.debug("max Concurrent Requests reached (" + this.config.maxConcurrentRequests + ")");
             return;
         }
-        this.redisClient.lpop("queue", function (error, result) {
+        this.redisClient.lpop("queue", (error, result) => {
             if (error) {
                 this.logger.error(error);
             }
@@ -66,41 +71,42 @@ class Tworker extends TeventDispatcher {
                     this.totalRequestsCount++;
                     var item = JSON.parse(result);
                     this.logger.trace("QUEUE ITEM: " + item.name);
-                    this.check(item, function (result) {
+                    var start = new Date().getTime();
+                    this.check(item, (result) => {
                         item.scheduled = 0;
                         item.previous_check = item.last_check;
                         item.last_check = new Date().getTime();
+                        item.ellapsed = new Date().getTime() - start;
                         try {
                             item.output = result.output;
-                            item.ellapsed = -1;
                             if (typeof result.exitCode != "undefined")
                                 item.current_state = result.exitCode;
                             if (result.perfdata) {
                                 item.perfdata = result.perfdata;
-                                if (result.perfdata.ellapsed)
-                                    item.ellapsed = result.perfdata.ellapsed;
+                            }
+                            else {
+                                item.perfdata = null;
                             }
                         }
                         catch (err) {
                             this.logger.error(err);
                             item.output = err.toString();
                             item.current_state = 3;
-                            item.ellapsed = 0;
                         }
                         this.runningRequestsCount--;
                         this.totalRequestsCompletedCount++;
-                        this.redisClient.rpush("results", JSON.stringify(item), function (err, result) {
+                        this.redisClient.rpush("results", JSON.stringify(item), (err, result) => {
                             if (err) {
                                 this.logger.error("Echec stockage du résultat dans REDIS. Ecriture directe en base (moins performant)");
                                 this.daoServices.saveServices([item]).then(function (saveresult) {
                                     this.logger.debug("Saved 1 item");
                                 }.bind(this));
                             }
-                        }.bind(this));
-                    }.bind(this));
+                        });
+                    });
                 }
             }
-        }.bind(this));
+        });
     }
     getErrorMessage(err) {
         var r = "";
@@ -120,10 +126,12 @@ class Tworker extends TeventDispatcher {
         return r;
     }
     check(service, onCompleted) {
-        this.pluginsManager.getPlugin(service.command_name).then(function (plugin) {
+        this.pluginsManager.getPlugin(service.command_name)
+            .then((plugin) => {
             try {
                 var args = tools.array_replace_recursive(plugin.command.args, service.args);
-                plugin._exec(args, this.config.pluginTimeout, service).then(function (r) {
+                plugin._exec(args, this.config.pluginTimeout, service)
+                    .then((r) => {
                     this.pluginsManager.releaseInstance(plugin);
                     if (typeof r == "undefined") {
                         var m = "plugin " + plugin.name + " result is undefined";
@@ -137,23 +145,13 @@ class Tworker extends TeventDispatcher {
                             r.exitCode = 3;
                         onCompleted(r);
                     }
-                }.bind(this), function (err) {
+                })
+                    .catch((err) => {
                     this.pluginsManager.releaseInstance(plugin);
-                    onCompleted({
-                        output: this.getErrorMessage(err),
-                        exitCode: 3,
-                        lastCheck: new Date,
-                        args: service.args,
-                        perfdata: {
-                            ellapsed: -1
-                        }
-                    });
                     if (err.toString().startsWith("TIMEOUT"))
                         this.logger.error("*****************  " + plugin.name + ": Timeout   **************");
-                }.bind(this))
-                    .catch(function (err) {
-                    this.pluginsManager.releaseInstance(plugin);
-                    this.logger.error(service.command_name + " plugin.exec.catch ", err.toString());
+                    else
+                        this.logger.error(service.command_name + " plugin.exec.catch ", err.toString());
                     onCompleted({
                         output: this.getErrorMessage(err),
                         exitCode: 3,
@@ -163,7 +161,7 @@ class Tworker extends TeventDispatcher {
                             ellapsed: -1
                         }
                     });
-                }.bind(this));
+                });
             }
             catch (err) {
                 this.logger.error(plugin.name + " plugin.exec exception", err.toString());
@@ -177,7 +175,8 @@ class Tworker extends TeventDispatcher {
                     }
                 });
             }
-        }.bind(this), function (err) {
+        })
+            .catch((err) => {
             var errorMessage = "Cannot load plugin " + service.command_name + ": " + err + " (worker: " + os.hostname() + ":" + process.pid + ")";
             this.logger.error(errorMessage);
             onCompleted({
@@ -189,7 +188,7 @@ class Tworker extends TeventDispatcher {
                     ellapsed: 0
                 }
             });
-        }.bind(this));
+        });
     }
     onStatTimer() {
         if (this.runningRequestsCount >= this.config.maxConcurrentRequests) {
@@ -226,7 +225,7 @@ class Tworker extends TeventDispatcher {
             this.totalRequestsCount = 0;
             this.totalRequestsCompletedCount = 0;
             osUtils.cpuUsage(function (v) {
-                data.stats.cpuUsage = v;
+                data.stats.cpuUsage = v * 100;
                 this.redisClient.hset("workers.infos", app.ClusterManager.nodeID, JSON.stringify(data));
             }.bind(this));
         }

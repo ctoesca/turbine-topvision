@@ -6,6 +6,17 @@ class TagentsDao extends TdaoMysql {
     constructor(objectClassName, datasource, config) {
         super(objectClassName, datasource, config);
     }
+    getByHost(host) {
+        var sql = "host like '" + host + "'";
+        return this.select({
+            where: sql
+        }).then(function (result) {
+            if (result.length > 0)
+                return result[0];
+            else
+                return null;
+        });
+    }
     getByHostAndPort(host, port, status) {
         var sql = "host like '" + host + "' AND port like '" + port + "'";
         if (arguments.length > 2)

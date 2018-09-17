@@ -16,7 +16,10 @@ class TpluginsManager extends TeventDispatcher {
                 this.config[k] = config[k];
         }
         this.logger = app.getLogger(this.constructor.name);
-        this.daoCommands = app.getDao("Command");
+        app.getDao("Command")
+            .then((dao) => {
+            this.daoCommands = dao;
+        });
     }
     getDefaultConfig() {
         return {
@@ -104,40 +107,39 @@ class TpluginsManager extends TeventDispatcher {
         }
     }
     getPlugin(name) {
-        return new Promise(function (resolve, reject) {
-            if (name == null) {
-                reject("Plugin '" + name + "' not found");
-            }
-            else {
-                this.createPluginsInstances(name).then(function (result) {
-                    if (typeof this.pluginsInstances[name] == "undefined") {
-                        var m = "getPlugin: this.pluginsInstances[name] est indéfini";
+        if (name == null) {
+            return Promise.reject("Plugin '" + name + "' not found");
+        }
+        else {
+            return this.createPluginsInstances(name)
+                .then((result) => {
+                if (typeof this.pluginsInstances[name] == "undefined") {
+                    var m = "this.pluginsInstances[name] est indéfini";
+                    this.logger.error(m);
+                    throw new Error(m);
+                }
+                else {
+                    var freeInstances = this.pluginsInstances[name].freeInstances;
+                    if (freeInstances.length == 0) {
+                        var m = "Max instances has been reached for plugin " + name + " (x" + this.config.maxSamePluginInstances + ")";
                         this.logger.error(m);
-                        reject(new Error(m));
+                        throw new Error(m);
                     }
                     else {
-                        var freeInstances = this.pluginsInstances[name].freeInstances;
-                        if (freeInstances.length == 0) {
-                            var m = "Max instances has been reached for plugin " + name + " (x" + this.config.maxSamePluginInstances + ")";
-                            this.logger.error(m);
-                            reject(new Error(m));
-                        }
-                        else {
-                            resolve(freeInstances.shift());
-                        }
+                        return freeInstances.shift();
                     }
-                }.bind(this), function (err) {
-                    this.freeAllInstances(name);
-                    this.logger.error("Load plugin '" + name + "' : " + err.toString());
-                    this.logger.debug(err);
-                    reject(err);
-                }.bind(this));
-            }
-        }.bind(this));
+                }
+            })
+                .catch(err => {
+                this.logger.error("Load plugin '" + name + "' : " + err.toString());
+                this.logger.debug(err);
+                throw err;
+            });
+        }
     }
     releaseInstance(instance) {
         instance.release(instance);
-        if (!instance.isDestroyed)
+        if (!instance.isDestroyed && this.pluginsInstances[instance.name])
             this.pluginsInstances[instance.name].freeInstances.push(instance);
     }
 }

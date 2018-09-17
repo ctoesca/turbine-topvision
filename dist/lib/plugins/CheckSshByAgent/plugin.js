@@ -1,7 +1,8 @@
 "use strict";
 
+const turbine = require("turbine")
 const BasePlugin = require('../BasePlugin/plugin.js');
-const StringTools = Turbine.tools.StringTools;
+const StringTools = turbine.tools.StringTools;
 
 module.exports = class CheckSshByAgent extends BasePlugin {
 
@@ -11,9 +12,9 @@ module.exports = class CheckSshByAgent extends BasePlugin {
 	
     getAgent(args){
 	    
-		return app.getService("agentsService").getAgentForHost("cdxlan017", 3000).then( function(agent){
+		return app.getService("checker").agentsService.getAgentForHost("localhost", 3000).then( function(agent){
 		    if (agent == null)
-		        throw "L'gent cdxlan017:3000 n'existe pas"
+		        throw "L'gent localhost:3000 n'existe pas"
 		    else
 		        return agent
 		});
@@ -84,6 +85,8 @@ module.exports = class CheckSshByAgent extends BasePlugin {
 	}
 
 }
+
+
 
 
 

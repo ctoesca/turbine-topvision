@@ -1,4 +1,3 @@
-/// <reference types="bluebird" />
 import * as turbine from "turbine";
 import Ttimer = turbine.tools.Ttimer;
 import Promise = require("bluebird");
@@ -21,6 +20,7 @@ export declare class TagentsService extends turbine.services.TbaseService {
     onMonitoringTimer(): void;
     getAgentForHost(host: any, port: any): Promise<any>;
     loadAgents(): any;
+    getByHost(host: any): any;
     getAgentByHostAndPort(host: any, port: any): any;
     getDefaultConfig(): {
         "active": boolean;

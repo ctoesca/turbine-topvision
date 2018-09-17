@@ -9,12 +9,17 @@ class TagentsEndpoint extends TcrudRestEndpoint {
         super(config);
         this.startDate = null;
         this.logger = app.getLogger("TagentsEndpoint");
+    }
+    init() {
         this.app.post("/setConfig", this.setConfig.bind(this));
         this.app.post("/getConfig", this.getConfig.bind(this));
         this.app.get("/checkAgentByHostAndPort", this.checkAgentByHostAndPort.bind(this));
-    }
-    init() {
         super.init();
+    }
+    _createService() {
+        var svc = super._createService();
+        svc.channelName = "topvision.ressources." + svc.model.name;
+        return svc;
     }
     getAgentService() {
         var checker = app.getService("checker");
@@ -41,7 +46,8 @@ class TagentsEndpoint extends TcrudRestEndpoint {
         }.bind(this));
     }
     saveAgentStatus(host, port, data) {
-        this.getAgentService().getAgentByHostAndPort(host, port).then(function (agent) {
+        this.getAgentService().getAgentByHostAndPort(host, port)
+            .then(function (agent) {
             if (agent != null) {
                 if (data.version)
                     agent.data.version = data.version;

@@ -8,7 +8,11 @@ module.exports = class CheckTest extends BasePlugin {
 
 	constructor( opt ){
 		super( opt );
-		this.daoServices = app.getDao("Service");
+		app.getDao("Service")
+		.then((dao) => 
+		{
+			this.daoServices = dao
+		})
 	}
 
 	exec(args, success, error){

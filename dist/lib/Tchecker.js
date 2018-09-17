@@ -12,6 +12,7 @@ const TservicesDao_1 = require("./dao/TservicesDao");
 const TcommandsDao_1 = require("./dao/TcommandsDao");
 const TagentsService_1 = require("./agents/TagentsService");
 const TagentsDao_1 = require("./dao/TagentsDao");
+const TagentsEndpoint_1 = require("./agents/TagentsEndpoint");
 const TserviceCommand_1 = require("./crudServices/TserviceCommand");
 class Tchecker extends turbine.services.TbaseService {
     constructor(name, server, config) {
@@ -24,7 +25,7 @@ class Tchecker extends turbine.services.TbaseService {
         this.pubSubServer = config.pubSubServer;
         var models = this.getModels();
         for (var modelName in models)
-            app.registerModel(modelName, models[modelName]);
+            app.registerModel(modelName, models[modelName], this.app);
         this.app.use(bodyParser.json({
             limit: '50mb'
         }));
@@ -76,7 +77,7 @@ class Tchecker extends turbine.services.TbaseService {
                     }
                 },
                 "entryPoint": {
-                    path: "/api/services",
+                    path: this.config.apiPath + "/services",
                     class: turbine.rest.TcrudRestEndpoint,
                     serviceClass: turbine.TcrudServiceBase
                 }
@@ -92,7 +93,7 @@ class Tchecker extends turbine.services.TbaseService {
                     }
                 },
                 "entryPoint": {
-                    path: "/api/commands",
+                    path: this.config.apiPath + "/commands",
                     class: turbine.rest.TcrudRestEndpoint,
                     serviceClass: TserviceCommand_1.TserviceCommand
                 }
@@ -108,8 +109,8 @@ class Tchecker extends turbine.services.TbaseService {
                     }
                 },
                 "entryPoint": {
-                    path: "/api/agents",
-                    class: turbine.rest.TcrudRestEndpoint,
+                    path: this.config.apiPath + "/agents",
+                    class: TagentsEndpoint_1.TagentsEndpoint,
                     serviceClass: turbine.TcrudServiceBase
                 }
             }
@@ -305,6 +306,8 @@ class Tchecker extends turbine.services.TbaseService {
         }.bind(this));
     }
     test(req, res) {
+        this.logger.info("TEST NODEID=" + app.ClusterManager.nodeID);
+        res.status("200").send("ok");
     }
 }
 exports.Tchecker = Tchecker;

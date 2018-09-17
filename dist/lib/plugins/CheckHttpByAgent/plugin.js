@@ -15,11 +15,11 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
 		});*/
 	}
 	 
-	getAgent(args){
+	getAgent(host){
 	     
-		return app.getService("checker").agentsService.getAgentForHost("127.0.0.1", 8090).then( function(agent){
+		return app.getService("checker").agentsService.getByHost(host).then( function(agent){
 		    if (agent == null)
-		        throw "Aucun agent disponible n'accède à 127.0.0.1:8090"
+		        throw "Aucun agent disponible sur "+host
 		    else
 		        return agent
 		});
@@ -75,7 +75,7 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
 		  	}		 
 		}
 
-		this.getAgent().then(function(agent)
+		this.getAgent(args.host).then(function(agent)
         {
             agent.http.request(opt).then( function(result)
             {
@@ -212,6 +212,8 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
 	
 
 }
+
+
 
 
 
