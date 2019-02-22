@@ -7,6 +7,10 @@ const moment = require("moment");
 class TservicesDao extends TdaoMysql {
     constructor(objectClassName, datasource, config) {
         super(objectClassName, datasource, config);
+        this.jsonFields = {
+            "perfdata": true,
+            "args": true
+        };
         app.getDao("Command")
             .then((dao) => {
             this.daoCommands = dao;
@@ -38,22 +42,6 @@ class TservicesDao extends TdaoMysql {
         var commandsPromises = [];
         for (var i = 0; i < objects.length; i++) {
             var obj = objects[i];
-            if (typeof obj.perfdata == "string") {
-                try {
-                    obj.perfdata = JSON.parse(obj.perfdata);
-                }
-                catch (err) {
-                    this.logger.error("Echec parse service.perfdata  (ID=" + obj.id + ") '" + obj.perfdata + "' : " + err);
-                }
-            }
-            if (typeof obj.args == "string") {
-                try {
-                    obj.args = JSON.parse(obj.args);
-                }
-                catch (err) {
-                    this.logger.error("Echec parse service.args (ID=" + obj.id + ") '" + obj.args + "' : " + err);
-                }
-            }
             commandsPromises.push(this.getCommand(obj));
         }
         return Promise.all(commandsPromises)
@@ -65,7 +53,10 @@ class TservicesDao extends TdaoMysql {
     }
     getCommand(obj) {
         if (obj.id_command) {
-            return this.daoCommands.getById(obj.id_command).then(function (command) {
+            return this.daoCommands.getById(obj.id_command, {
+                fields: "id,name,args"
+            })
+                .then((command) => {
                 return command;
             });
         }
@@ -73,25 +64,28 @@ class TservicesDao extends TdaoMysql {
             return null;
         }
     }
-    saveServices(services) {
+    saveCheckResults(results) {
         var SQL = "";
         try {
-            for (var i = 0; i < services.length; i++) {
-                var service = services[i];
+            for (var i = 0; i < results.length; i++) {
+                var result = results[i];
                 SQL += "UPDATE services SET ";
                 SQL += "scheduled=0";
-                SQL += ",last_check='" + moment(service.last_check).format("YYYY-MM-DD HH:mm:ss") + "'";
-                if (service.previous_check)
-                    SQL += ",previous_check='" + moment(service.previous_check).format("YYYY-MM-DD HH:mm:ss") + "'";
-                SQL += ",ellapsed='" + service.ellapsed + "'";
-                if (service.perfdata)
-                    SQL += ",perfdata=" + this.escapeSqlString(JSON.stringify(service.perfdata));
-                if (typeof service.output != "undefined")
-                    SQL += ",output=" + this.escapeSqlString(service.output);
+                SQL += ",last_check='" + moment(result.checkTime).format("YYYY-MM-DD HH:mm:ss") + "'";
+                if (result.previousCheckTime)
+                    SQL += ",previous_check='" + moment(result.previousCheckTime).format("YYYY-MM-DD HH:mm:ss") + "'";
+                if (typeof result.ellapsed == "number")
+                    SQL += ",ellapsed='" + result.ellapsed + "'";
+                else
+                    SQL += ",ellapsed=NULL";
+                if (result.perfdata)
+                    SQL += ",perfdata=" + this.escapeSqlString(JSON.stringify(result.perfdata));
+                if (typeof result.output != "undefined")
+                    SQL += ",output=" + this.escapeSqlString(result.output);
                 else
                     SQL += ",output=NULL";
-                SQL += ",current_state=" + service.current_state;
-                SQL += " WHERE " + this.IDField + "=" + service.id + ";";
+                SQL += ",current_state=" + result.exitCode;
+                SQL += " WHERE " + this.IDField + "=" + result.serviceId + ";";
             }
         }
         catch (err) {
@@ -104,6 +98,43 @@ class TservicesDao extends TdaoMysql {
             return Promise.resolve(0);
         }
     }
+    getUniqueParents(childrenIds) {
+        if (childrenIds.length == 0) {
+            return Promise.resolve([]);
+        }
+        else {
+            var where = "id_service IN (" + childrenIds.join(',') + ")";
+            return app.getDao("x_service_parents")
+                .then(dao => {
+                return dao.select({
+                    where: where,
+                    groupBy: 'id_parent'
+                });
+            })
+                .then(children => {
+                var ids = [];
+                for (var i = 0; i < children.length; i++) {
+                    ids.push(children[i].id_parent);
+                }
+                return this.getByIds(ids);
+            });
+        }
+    }
+    getParents(id) {
+        return app.getDao("x_service_parents")
+            .then(dao => {
+            return dao.select({
+                where: "id_service=" + id
+            });
+        })
+            .then((results) => {
+            var ids = [];
+            for (var i = 0; i < results.length; i++) {
+                ids.push(results[i].id_parent);
+            }
+            return this.getByIds(ids);
+        });
+    }
     setScheduled(idList, value) {
         if (idList.length > 0) {
             if (value)
@@ -114,9 +145,9 @@ class TservicesDao extends TdaoMysql {
             return this.queryTransaction(SQL);
         }
         else {
-            return new Promise(function (resolve, reject) {
+            return new Promise((resolve, reject) => {
                 resolve(0);
-            }.bind(this));
+            });
         }
     }
 }

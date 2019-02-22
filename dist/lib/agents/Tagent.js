@@ -100,7 +100,7 @@ class Tagent extends TeventDispatcher {
         });
     }
     _call(method, url, data, httpOptions = null) {
-        return new Promise(function (resolve, reject) {
+        return new Promise((resolve, reject) => {
             var _httpOptions = {
                 "retryOnOtherAgents": true,
                 "connect_timeout": this.httpConnectTimeout,
@@ -135,7 +135,7 @@ class Tagent extends TeventDispatcher {
                     opt.body = data;
                 }
             }
-            var req = request(opt, function (err, response, body) {
+            var req = request(opt, (err, response, body) => {
                 if (err) {
                     this.logger.debug("Tagent._call url=" + opt.url + " : " + err.toString());
                     err = new Error("Echec appel de l'agent " + this.name + ": " + err.toString());
@@ -168,8 +168,8 @@ class Tagent extends TeventDispatcher {
                         reject(err);
                     }
                 }
-            }.bind(this));
-        }.bind(this));
+            });
+        });
     }
 }
 exports.Tagent = Tagent;

@@ -15,6 +15,9 @@ class Tscheduler extends TeventDispatcher {
         this.savingResults = false;
         this.resultsCount = 0;
         this.config = config;
+        Promise.config({
+            cancellation: true
+        });
         this.logger = app.getLogger(this.constructor.name);
         this.logger.debug(this.constructor.name + " created");
         this.redisClient = app.ClusterManager.getClient();
@@ -61,58 +64,63 @@ class Tscheduler extends TeventDispatcher {
             return;
         }
         this.scheduling++;
-        this.redisClient.llen("queue", function (error, result) {
-            if (error) {
-                this.logger.error(error, "onScheduleTimer");
-                this.scheduling--;
+        var idList = [];
+        var servicesListJson = [];
+        var p = this.redisClient.llen("queue")
+            .then(result => {
+            this.queueLength = result;
+            if (this.config.scheduleOnlyIfQueueIsEmpty && (this.queueLength > 0)) {
+                this.logger.debug("Queue is not empty: schedule cancelled");
+                return;
             }
-            else {
-                this.queueLength = result;
-                if (this.config.scheduleOnlyIfQueueIsEmpty && (this.queueLength > 0)) {
-                    this.logger.debug("Queue is not empty: schedule cancelled");
-                    this.scheduling--;
-                    return;
-                }
-                var limit = this.config.maxQueueLength;
-                limit = this.config.maxQueueLength - this.queueLength;
-                if (limit <= 0) {
-                    this.scheduling--;
-                    return;
-                }
-                if (limit > this.config.maxScheduleSize)
-                    limit = this.config.maxScheduleSize;
-                this.daoServices.getServicesToCheck({ limit: limit })
-                    .then(function (services) {
-                    var idList = [];
-                    var servicesListJson = [];
-                    for (var i = 0; i < services.length; i++) {
-                        var service = services[i];
-                        idList.push(service[this.daoServices.IDField].toString());
-                        servicesListJson.push(JSON.stringify(service));
-                    }
-                    if (servicesListJson.length > 0) {
-                        this.daoServices.setScheduled(idList, true).then(function (result) {
-                            this.scheduling--;
-                            this.redisClient.rpush("queue", servicesListJson, function (error, result) {
-                                if (error) {
-                                    this.logger.error(error);
-                                    this.daoServices.setScheduled(idList, false);
-                                }
-                            }.bind(this));
-                            this.logger.debug("Add " + idList.length + " to queue");
-                        }.bind(this), function (err) {
-                            this.scheduling--;
-                        }.bind(this));
-                    }
-                    else {
-                        this.scheduling--;
-                    }
-                }.bind(this), function (err) {
-                    this.logger.error("onScheduleTimer.getServicesToCheck ERROR: " + err);
-                    this.scheduling--;
-                }.bind(this));
+            var limit = this.config.maxQueueLength - this.queueLength;
+            if (limit <= 0)
+                return;
+            if (limit > this.config.maxScheduleSize)
+                limit = this.config.maxScheduleSize;
+            return app.getDao(this.daoClass).then((dao) => {
+                this.daoServices = dao;
+                return dao.getServicesToCheck({ limit: limit });
+            });
+        })
+            .then(services => {
+            if (services)
+                return this.pushToQueue(services);
+        })
+            .catch(err => {
+            this.logger.error("onScheduleTimer ERROR: ", err);
+        })
+            .finally(() => {
+            this.scheduling--;
+        });
+    }
+    pushToQueue(services) {
+        var servicesListJson = [];
+        var idList = [];
+        for (var i = 0; i < services.length; i++) {
+            var service = services[i];
+            if (service.scheduled == false) {
+                idList.push(service[this.daoServices.IDField].toString());
+                servicesListJson.push(JSON.stringify(service));
             }
-        }.bind(this));
+        }
+        if (servicesListJson.length > 0) {
+            return this.daoServices.setScheduled(idList, true)
+                .then(() => {
+                return this.redisClient.rpush("queue", servicesListJson);
+            })
+                .then(() => {
+                this.logger.debug("Add " + idList.length + " to queue");
+                return Promise.resolve();
+            })
+                .catch(error => {
+                this.logger.error(error);
+                return this.daoServices.setScheduled(idList, false);
+            });
+        }
+        else {
+            return Promise.resolve();
+        }
     }
     saveResults() {
         if (this.savingResults) {
@@ -120,68 +128,79 @@ class Tscheduler extends TeventDispatcher {
             return;
         }
         this.savingResults = true;
-        this.redisClient.llen("results", function (error, len) {
-            if (error) {
-                this.logger.error("llen(results)", error);
-                this.savingResults = false;
-            }
-            else {
-                this.logger.debug("Saving " + len + " results...");
-                this.redisClient.lrange("results", 0, len - 1, function (error, results) {
-                    if (error) {
-                        this.logger.error(error);
-                        this.savingResults = false;
+        var resultsToSave = null;
+        var len = 0;
+        var servicesIds = [];
+        this.redisClient.llen("results")
+            .then(result => {
+            len = result;
+            this.logger.debug("Saving " + len + " results...");
+            if (len > 0)
+                return this.redisClient.lrange("results", 0, len - 1);
+        })
+            .then(results => {
+            if (results && (results.length > 0)) {
+                resultsToSave = [];
+                for (var i = 0; i < results.length; i++) {
+                    var result = JSON.parse(results[i]);
+                    resultsToSave.push(result);
+                }
+                return this.daoServices.saveCheckResults(resultsToSave)
+                    .catch(err => {
+                    this.logger.error("ECHEC enregistrement des résultats en base: les services concernés vont être déverrouilés");
+                    var idList = [];
+                    for (var i = 0; i < resultsToSave.length; i++) {
+                        var resultToSave = resultsToSave[i];
+                        idList.push(resultToSave.serviceId);
                     }
-                    else {
-                        if ((results == null) || (results.length == 0)) {
-                            this.savingResults = false;
-                        }
-                        else {
-                            for (var i = 0; i < results.length; i++)
-                                results[i] = JSON.parse(results[i]);
-                            this.daoServices.saveServices(results).then(function (saveresult) {
-                                this.resultsCount += results.length;
-                                this.savingResults = false;
-                                this.logger.debug("Saved " + results.length + " items");
-                                this.redisClient.ltrim("results", len, -1, function (error, ltrimresult) {
-                                    if (error)
-                                        this.logger.error(error);
-                                }.bind(this));
-                            }.bind(this), function (err) {
-                                this.logger.error("Tscheduler.saveResults: " + err);
-                                this.daoServices.reset().then(function () {
-                                    this.savingResults = false;
-                                }.bind(this), function (err) {
-                                    this.logger.error("Error RESET: " + err);
-                                    this.savingResults = false;
-                                }.bind(this));
-                                this.redisClient.ltrim("results", len, -1, function (error, ltrimresult) {
-                                    if (error)
-                                        this.logger.error(error);
-                                }.bind(this));
-                            }.bind(this));
+                    return this.daoServices.setScheduled(idList, false)
+                        .then(() => {
+                        throw err;
+                    });
+                })
+                    .then((updated) => {
+                    this.resultsCount += updated.length;
+                    for (var i = 0; i < resultsToSave.length; i++) {
+                        var result = resultsToSave[i];
+                        if ((result.parentsCount > 0) && (result.old.current_state != result.exitCode)) {
+                            servicesIds.push(result.serviceId);
                         }
                     }
-                }.bind(this));
+                    return this.daoServices.getUniqueParents(servicesIds);
+                })
+                    .then((parents) => {
+                    if (parents.length > 0) {
+                        this.pushToQueue(parents);
+                        this.logger.debug("ADD " + parents.length + " PARENTS TO QUEUE..." + servicesIds.join(','), parents);
+                    }
+                });
             }
-        }.bind(this));
+        })
+            .catch(err => {
+            this.logger.error("Tscheduler.saveResults", err);
+        })
+            .finally(() => {
+            this.savingResults = false;
+            if (len > 0)
+                this.redisClient.ltrim("results", len, -1);
+        });
     }
     getSaveQueueLength() {
-        return new Promise(function (resolve, reject) {
-            this.redisClient.llen("results", function (error, len) {
+        return new Promise((resolve, reject) => {
+            this.redisClient.llen("results", (error, len) => {
                 if (error)
                     reject(error);
                 else
                     resolve(len);
             });
-        }.bind(this));
+        });
     }
     onSaveTimer() {
         this.saveResults();
     }
     onStatTimer() {
         if (this.lastStat) {
-            this.redisClient.llen("queue", function (error, result) {
+            this.redisClient.llen("queue", (error, result) => {
                 if (!error) {
                     this.queueLength = result;
                     var now = new Date();
@@ -206,31 +225,31 @@ class Tscheduler extends TeventDispatcher {
                             enabledServicesCount: 0
                         }
                     };
-                    this.getSaveQueueLength().then(function (count) {
+                    this.getSaveQueueLength().then((count) => {
                         payload.data.saveQueueLength = count;
-                        return this.daoServices.query("select AVG(retard) as latency from view_services where retard >=0 AND enabled=1");
-                    }.bind(this))
-                        .then(function (result) {
+                        return this.daoServices.query("select SUM(retard)/(select count(*) from view_services where enabled=1) as latency from view_services where retard >=0 AND enabled=1");
+                    })
+                        .then((result) => {
                         if (result[0].latency == null)
                             result[0].latency = 0;
                         payload.data.latency = Math.round(result[0].latency * 10) / 10;
-                        return this.daoServices.query("select MAX(retard) as maxLatency from view_services where retard >0 AND enabled=1");
-                    }.bind(this))
-                        .then(function (result) {
+                        return this.daoServices.query("select MAX(retard) as maxLatency from view_services where retard >=0 AND enabled=1");
+                    })
+                        .then((result) => {
                         if (result[0].maxLatency == null)
                             result[0].maxLatency = 0;
                         payload.data.maxLatency = Math.round(result[0].maxLatency * 10) / 10;
                         return this.daoServices.query("select COUNT(*) as scheduled from services where scheduled >0 AND enabled=1");
-                    }.bind(this))
-                        .then(function (result) {
+                    })
+                        .then((result) => {
                         payload.data.scheduledCount = result[0].scheduled;
                         return this.daoServices.query("select AVG(check_interval) as avg_check_interval from services where enabled=1");
-                    }.bind(this))
-                        .then(function (result) {
+                    })
+                        .then((result) => {
                         payload.data.avgCheckInterval = Math.round(10 * result[0].avg_check_interval) / 10;
                         return this.daoServices.query("select COUNT(*) as enabledServicesCount from services where enabled=1");
-                    }.bind(this))
-                        .then(function (result) {
+                    })
+                        .then((result) => {
                         payload.data.enabledServicesCount = result[0].enabledServicesCount;
                         var sql = `select 
 						count(*) as count,
@@ -238,15 +257,15 @@ class Tscheduler extends TeventDispatcher {
 						count(*)/check_interval as avg
 						from services svc where enabled=1 group by check_interval`;
                         return this.daoServices.query(sql);
-                    }.bind(this))
-                        .then(function (result) {
+                    })
+                        .then((result) => {
                         var idealRate = 0;
                         for (var i = 0; i < result.length; i++)
                             idealRate += result[i].avg;
                         idealRate = Math.floor(idealRate) + 1;
                         payload.data.idealRate = idealRate;
                         var key = "workers.infos";
-                        this.redisClient.hgetall(key, function (err, result) {
+                        this.redisClient.hgetall(key, (err, result) => {
                             for (var k in result) {
                                 var item = JSON.parse(result[k]);
                                 var deleteItem = false;
@@ -271,10 +290,10 @@ class Tscheduler extends TeventDispatcher {
                             if (this.pubSubServer) {
                                 this.pubSubServer.broadcast({ type: 'publish', channel: "topvision.checker.stats", payload: payload });
                             }
-                        }.bind(this));
-                    }.bind(this));
+                        });
+                    });
                 }
-            }.bind(this));
+            });
         }
         else {
             this.lastStat = new Date();

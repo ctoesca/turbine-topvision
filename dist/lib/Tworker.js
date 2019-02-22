@@ -4,6 +4,7 @@ const turbine = require("turbine");
 var TeventDispatcher = turbine.events.TeventDispatcher;
 var Ttimer = turbine.tools.Ttimer;
 var tools = turbine.tools;
+const Promise = require("bluebird");
 const osUtils = require("os-utils");
 const os = require("os");
 class Tworker extends TeventDispatcher {
@@ -14,6 +15,9 @@ class Tworker extends TeventDispatcher {
         this.totalRequestsCount = 0;
         this.totalRequestsCompletedCount = 0;
         this.lastStat = null;
+        Promise.config({
+            cancellation: true
+        });
         this.config = config;
         this.pluginsManager = pluginsManager;
         this.logger = app.getLogger(this.constructor.name);
@@ -23,6 +27,10 @@ class Tworker extends TeventDispatcher {
         app.getDao(this.daoClass)
             .then((dao) => {
             this.daoServices = dao;
+        });
+        app.getDao("x_service_parents")
+            .then((dao) => {
+            this.daox_service_parents = dao;
         });
         this.statTimer = new Ttimer({ delay: this.config.statTimerInterval });
         this.statTimer.on(Ttimer.ON_TIMER, this.onStatTimer, this);
@@ -54,57 +62,47 @@ class Tworker extends TeventDispatcher {
         this.workTimer.stop();
     }
     onWorkTimer() {
-        if (this.runningRequestsCount >= this.config.maxConcurrentRequests) {
-            this.logger.debug("max Concurrent Requests reached (" + this.config.maxConcurrentRequests + ")");
+        if (this.runningRequestsCount >= this.config.maxConcurrentRequests)
             return;
-        }
-        this.redisClient.lpop("queue", (error, result) => {
+        this.redisClient.lpop("queue", (error, service) => {
             if (error) {
                 this.logger.error(error);
             }
             else {
-                if (result == null) {
+                if (service == null) {
                     this.logger.trace("QUEUE : NO ITEM LEFT");
                 }
                 else {
                     this.runningRequestsCount++;
                     this.totalRequestsCount++;
-                    var item = JSON.parse(result);
-                    this.logger.trace("QUEUE ITEM: " + item.name);
-                    var start = new Date().getTime();
-                    this.check(item, (result) => {
-                        item.scheduled = 0;
-                        item.previous_check = item.last_check;
-                        item.last_check = new Date().getTime();
-                        item.ellapsed = new Date().getTime() - start;
-                        try {
-                            item.output = result.output;
-                            if (typeof result.exitCode != "undefined")
-                                item.current_state = result.exitCode;
-                            if (result.perfdata) {
-                                item.perfdata = result.perfdata;
-                            }
-                            else {
-                                item.perfdata = null;
-                            }
-                        }
-                        catch (err) {
-                            this.logger.error(err);
-                            item.output = err.toString();
-                            item.current_state = 3;
-                        }
+                    service = JSON.parse(service);
+                    this.check(service, null, (result) => {
                         this.runningRequestsCount--;
                         this.totalRequestsCompletedCount++;
-                        this.redisClient.rpush("results", JSON.stringify(item), (err, result) => {
-                            if (err) {
-                                this.logger.error("Echec stockage du résultat dans REDIS. Ecriture directe en base (moins performant)");
-                                this.daoServices.saveServices([item]).then(function (saveresult) {
-                                    this.logger.debug("Saved 1 item");
-                                }.bind(this));
-                            }
-                        });
+                        this.saveResultInRedis(result);
                     });
                 }
+            }
+        });
+    }
+    getChildren(id) {
+        return this.daox_service_parents.select({
+            where: "id_parent=" + id
+        })
+            .then((results) => {
+            var ids = [];
+            for (var i = 0; i < results.length; i++) {
+                ids.push(results[i].id_service);
+            }
+            return this.daoServices.getByIds(ids);
+        });
+    }
+    saveResultInRedis(result) {
+        result = JSON.stringify(result);
+        this.redisClient.rpush("results", result, (err, result) => {
+            if (err) {
+                this.logger.error("Echec stockage du résultat dans REDIS. Ecriture directe en base (moins performant)");
+                this.daoServices.saveCheckResults([result]);
             }
         });
     }
@@ -125,74 +123,84 @@ class Tworker extends TeventDispatcher {
         }
         return r;
     }
-    check(service, onCompleted) {
-        this.pluginsManager.getPlugin(service.command_name)
-            .then((plugin) => {
-            try {
-                var args = tools.array_replace_recursive(plugin.command.args, service.args);
-                plugin._exec(args, this.config.pluginTimeout, service)
-                    .then((r) => {
-                    this.pluginsManager.releaseInstance(plugin);
-                    if (typeof r == "undefined") {
-                        var m = "plugin " + plugin.name + " result is undefined";
-                        this.logger.error(m);
-                        throw m;
-                    }
-                    else {
-                        if (r.exitCode < 0)
+    check(service, children, onCompleted) {
+        var r = {
+            serviceId: service.id,
+            output: "",
+            exitCode: 3,
+            previousCheckTime: service.last_check,
+            checkTime: new Date(),
+            args: service.args,
+            perfdata: null,
+            ellapsed: null,
+            parentsCount: service.parentsCount,
+            childrenCount: service.childrenCount,
+            old: {
+                current_state: service.current_state
+            }
+        };
+        var plugin = null;
+        return this.pluginsManager.getPlugin(service.command_name)
+            .then((result) => {
+            plugin = result;
+            if (service.childrenCount > 0) {
+                return this.getChildren(service.id);
+            }
+            else {
+                return Promise.resolve(null);
+            }
+        })
+            .then((children) => {
+            var start = new Date().getTime();
+            var args = tools.array_replace_recursive(plugin.command.args, service.args);
+            r.args = args;
+            if (children)
+                args.children = children;
+            var promise = plugin._exec(args, service)
+                .then((result) => {
+                if (typeof result == "undefined") {
+                    r.output = "plugin " + plugin.name + " result is undefined";
+                    r.exitCode = 3;
+                }
+                else {
+                    if (typeof result.exitCode == 'number') {
+                        r.exitCode = result.exitCode;
+                        if ((r.exitCode < 0) || (r.exitCode > 3))
                             r.exitCode = 3;
-                        else if (r.exitCode > 3)
-                            r.exitCode = 3;
-                        onCompleted(r);
                     }
-                })
-                    .catch((err) => {
-                    this.pluginsManager.releaseInstance(plugin);
-                    if (err.toString().startsWith("TIMEOUT"))
-                        this.logger.error("*****************  " + plugin.name + ": Timeout   **************");
+                    r.output = result.output;
+                    if (result.perfdata)
+                        r.perfdata = result.perfdata;
                     else
-                        this.logger.error(service.command_name + " plugin.exec.catch ", err.toString());
-                    onCompleted({
-                        output: this.getErrorMessage(err),
-                        exitCode: 3,
-                        lastCheck: new Date,
-                        args: service.args,
-                        perfdata: {
-                            ellapsed: -1
-                        }
-                    });
-                });
-            }
-            catch (err) {
-                this.logger.error(plugin.name + " plugin.exec exception", err.toString());
+                        r.perfdata = null;
+                }
+            })
+                .timeout(this.config.pluginTimeout * 1000)
+                .catch(Promise.TimeoutError, (e) => {
+                r.exitCode = 3;
+                r.output = "operation timeout after " + this.config.pluginTimeout + " sec";
+            })
+                .catch((err) => {
+                this.logger.error(service.command_name + " plugin.exec error", err.toString());
+                r.exitCode = 3;
+                r.output = this.getErrorMessage(err);
+            })
+                .finally(() => {
                 this.pluginsManager.releaseInstance(plugin);
-                onCompleted({
-                    output: this.getErrorMessage(err),
-                    exitCode: 3,
-                    lastCheck: new Date,
-                    perfdata: {
-                        ellapsed: -1
-                    }
-                });
-            }
+                r.ellapsed = new Date().getTime() - start;
+                onCompleted(r);
+            });
         })
             .catch((err) => {
             var errorMessage = "Cannot load plugin " + service.command_name + ": " + err + " (worker: " + os.hostname() + ":" + process.pid + ")";
             this.logger.error(errorMessage);
-            onCompleted({
-                output: errorMessage,
-                exitCode: 3,
-                lastCheck: new Date,
-                args: service.args,
-                perfdata: {
-                    ellapsed: 0
-                }
-            });
+            r.output = errorMessage;
+            onCompleted(r);
         });
     }
     onStatTimer() {
         if (this.runningRequestsCount >= this.config.maxConcurrentRequests) {
-            this.logger.warn("worker " + process.pid + ": max Concurrent Requests reached (" + this.runningRequestsCount + ")");
+            this.logger.warn("worker " + process.pid + ": max Concurrent tasks reached (" + this.runningRequestsCount + ")");
         }
         else {
             this.logger.debug("worker " + process.pid + ": runningRequestsCount=" + this.runningRequestsCount);
@@ -224,10 +232,10 @@ class Tworker extends TeventDispatcher {
             this.lastStat = now;
             this.totalRequestsCount = 0;
             this.totalRequestsCompletedCount = 0;
-            osUtils.cpuUsage(function (v) {
+            osUtils.cpuUsage((v) => {
                 data.stats.cpuUsage = v * 100;
                 this.redisClient.hset("workers.infos", app.ClusterManager.nodeID, JSON.stringify(data));
-            }.bind(this));
+            });
         }
         else {
             this.lastStat = new Date();

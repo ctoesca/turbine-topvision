@@ -11,10 +11,10 @@ class TserviceCommand extends TcrudServiceBase {
     }
     save(obj, opt) {
         return super.save(obj, opt)
-            .then(function (result) {
+            .then((result) => {
             app.ClusterManager.getClient().publish("savePlugin", JSON.stringify(result));
             return result;
-        }.bind(this));
+        });
     }
 }
 exports.TserviceCommand = TserviceCommand;

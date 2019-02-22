@@ -24,8 +24,9 @@ export declare class Tscheduler extends TeventDispatcher {
     stop(): void;
     setConfig(config: any): void;
     onScheduleTimer(): void;
+    pushToQueue(services: any): any;
     saveResults(): void;
-    getSaveQueueLength(): Promise<{}>;
+    getSaveQueueLength(): Promise<number>;
     onSaveTimer(): void;
     onStatTimer(): void;
 }

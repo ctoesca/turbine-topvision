@@ -9,10 +9,10 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
  
 	constructor( opt ){
 		super( opt );
-		/*this.elasticClient = new elasticsearch.Client({
-		  host: 'localhost:9200',
+		this.elasticClient = new elasticsearch.Client({
+		  host: 'localhost:9500',
 		  log: 'info'
-		});*/
+		});
 	}
 	 
 	getAgent(host){
@@ -81,7 +81,7 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
             {
                 var r =  this.processSuccess(args, result, startTime)
                 r.perfdata.agent = agent.data.host+":"+agent.data.port
-                //this.savePerfdata(r, service)
+                this.savePerfdata(r, service)
                 success( r)
             }.bind(this))
             .catch(function(err){
@@ -96,23 +96,19 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
 	}
     savePerfdata( result, service){
      
-        var id = new Date().getTime();
-        var data = {
-            "name": service.name,
-            "@timestamp": id,
-            "value": result.perfdata.ellapsed
-        }
-     
-        this.elasticClient.create({
+        var data = result
+        data.name = service.name
+        data["@timestamp"] = moment().format("YYYY-MM-DDTHH:mm:ss.SSSZZ")  
+        
+        this.elasticClient.index({
           index: 'topvision-'+moment().format("YYYY.MM.DD"),
           type: 'data',
-          id: id,
           body: data
         }, function (error, response) {
           if (error){
               logger.error(error)
           }else{
-              logger.info(response)
+              logger.debug(response)
           }
         });
     }
@@ -151,6 +147,8 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
         
         if (response.isError)
         {
+            r.perfdata.status = 0
+            
             if (typeof response.error == "object")
     		{
     		    // response.error est un objet 
@@ -187,6 +185,9 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
     		}
         }else{
             
+            r.perfdata.status = response.status
+            r.perfdata.ellapsed = response.xTime
+            
             if (args.showHttpStatus){
                 
 			    r.output = "HTTP "+response.status +" in "+response.xTime+" ms"
@@ -201,9 +202,14 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
     		}else
     		{
     		    r.output = "OK: "+r.output
-    		    
     	        r.exitCode = 0;
+    	        if (r.perfdata.ellapsed > 300)
+    		        r.exitCode = 1;
+    		    if (r.perfdata.ellapsed > 500)
+    		        r.exitCode = 2;
     		}
+    		
+    	
     		
         }
        
@@ -212,6 +218,19 @@ module.exports = class CheckHttpByAgent extends BasePlugin {
 	
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

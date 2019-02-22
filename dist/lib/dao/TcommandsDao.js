@@ -5,19 +5,11 @@ var TdaoMysql = turbine.dao.TdaoMysql;
 class TcommandsDao extends TdaoMysql {
     constructor(objectClassName, datasource, config) {
         super(objectClassName, datasource, config);
+        this.jsonFields = {
+            "args": true
+        };
     }
     processObjects(objects, fields) {
-        for (var i = 0; i < objects.length; i++) {
-            var obj = objects[i];
-            if (typeof obj.args == "string") {
-                try {
-                    obj.args = JSON.parse(obj.args);
-                }
-                catch (err) {
-                    this.logger.error("obj.args = " + obj.args + ", " + err.toString());
-                }
-            }
-        }
         return objects;
     }
     getByName(name) {

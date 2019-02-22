@@ -1,7 +1,11 @@
 import * as turbine from "turbine";
 import TeventDispatcher = turbine.events.TeventDispatcher;
 import Ttimer = turbine.tools.Ttimer;
+import Promise = require("bluebird");
 import PubSubServer from 'turbine-pubsub';
+import { Tdaox_service_parents } from './dao/Tdaox_service_parents';
+import { TservicesDao } from './dao/TservicesDao';
+import { Tscheduler } from './Tscheduler';
 export declare class Tworker extends TeventDispatcher {
     redisClient: any;
     logger: any;
@@ -12,17 +16,21 @@ export declare class Tworker extends TeventDispatcher {
     totalRequestsCount: number;
     totalRequestsCompletedCount: number;
     lastStat: any;
-    daoServices: any;
+    daoServices: TservicesDao;
     statTimer: Ttimer;
     workTimer: Ttimer;
     requestRate: any;
     pubSubServer: PubSubServer;
+    daox_service_parents: Tdaox_service_parents;
+    scheduler: Tscheduler;
     constructor(config: any, pluginsManager: any);
     setConfig(config: any): void;
     start(): void;
     stop(): void;
     onWorkTimer(): void;
+    getChildren(id: any): Promise<{}>;
+    saveResultInRedis(result: any): void;
     getErrorMessage(err: any): string;
-    check(service: any, onCompleted: any): void;
+    check(service: any, children: any, onCompleted: any): Promise<any>;
     onStatTimer(): void;
 }

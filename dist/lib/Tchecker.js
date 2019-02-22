@@ -7,8 +7,9 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const Tscheduler_1 = require("./Tscheduler");
 const Tworker_1 = require("./Tworker");
-const TpluginsManager_1 = require("./TpluginsManager");
+const TpluginsManager2_1 = require("./TpluginsManager2");
 const TservicesDao_1 = require("./dao/TservicesDao");
+const Tdaox_service_parents_1 = require("./dao/Tdaox_service_parents");
 const TcommandsDao_1 = require("./dao/TcommandsDao");
 const TagentsService_1 = require("./agents/TagentsService");
 const TagentsDao_1 = require("./dao/TagentsDao");
@@ -43,19 +44,20 @@ class Tchecker extends turbine.services.TbaseService {
         this.httpServer.use(this.config.apiPath, this.app);
         app.ClusterManager.on("ISMASTER_CHANGED", this.onIsMasterChanged, this);
         this.redisClient = app.ClusterManager.getClient();
-        this.pluginsManager = new TpluginsManager_1.TpluginsManager({
+        this.pluginsManager = new TpluginsManager2_1.TpluginsManager({
             maxSamePluginInstances: this.config.worker.maxSamePluginInstances
         });
         this.scheduler = new Tscheduler_1.Tscheduler(this.config.scheduler);
         this.scheduler.pubSubServer = this.pubSubServer;
         this.worker = new Tworker_1.Tworker(this.config.worker, this.pluginsManager);
         this.worker.pubSubServer = this.pubSubServer;
+        this.worker.scheduler = this.scheduler;
         this.statTimer = new Ttimer({ delay: this.statTimerIterval * 1000 });
         this.statTimer.on(Ttimer.ON_TIMER, this.onStatTimer, this);
         this.subscribeClient = app.ClusterManager.getNewClient();
-        this.subscribeClient.on("subscribe", function (channel, count) {
+        this.subscribeClient.on("subscribe", (channel, count) => {
             this.logger.info("subscribe success to " + channel);
-        }.bind(this));
+        });
         this.subscribeClient.on("message", this.onBusMessage.bind(this));
         this.subscribeClient.subscribe("savePlugin");
         this.subscribeClient.subscribe("kill-worker");
@@ -66,6 +68,22 @@ class Tchecker extends turbine.services.TbaseService {
     }
     getModels() {
         return {
+            "x_service_parents": {
+                IDField: "id",
+                "dao": {
+                    "class": Tdaox_service_parents_1.Tdaox_service_parents,
+                    "config": {
+                        datasource: "topvision",
+                        tableName: "x_service_parents",
+                        viewName: "x_service_parents"
+                    }
+                },
+                "entryPoint": {
+                    path: null,
+                    class: turbine.rest.TcrudRestEndpoint,
+                    serviceClass: turbine.TcrudServiceBase
+                }
+            },
             "Service": {
                 IDField: "id",
                 "dao": {
@@ -77,7 +95,7 @@ class Tchecker extends turbine.services.TbaseService {
                     }
                 },
                 "entryPoint": {
-                    path: this.config.apiPath + "/services",
+                    path: "/services",
                     class: turbine.rest.TcrudRestEndpoint,
                     serviceClass: turbine.TcrudServiceBase
                 }
@@ -93,7 +111,7 @@ class Tchecker extends turbine.services.TbaseService {
                     }
                 },
                 "entryPoint": {
-                    path: this.config.apiPath + "/commands",
+                    path: "/commands",
                     class: turbine.rest.TcrudRestEndpoint,
                     serviceClass: TserviceCommand_1.TserviceCommand
                 }
@@ -109,7 +127,7 @@ class Tchecker extends turbine.services.TbaseService {
                     }
                 },
                 "entryPoint": {
-                    path: this.config.apiPath + "/agents",
+                    path: "/agents",
                     class: TagentsEndpoint_1.TagentsEndpoint,
                     serviceClass: turbine.TcrudServiceBase
                 }
@@ -128,15 +146,15 @@ class Tchecker extends turbine.services.TbaseService {
                 "statTimerInterval": 2000,
                 "scheduleInterval": 1000,
                 "maxQueueLength": 1000,
-                "maxScheduleSize": 5,
+                "maxScheduleSize": 100,
                 "scheduleOnlyIfQueueIsEmpty": false,
                 "saveInterval": 2000
             },
             "worker": {
-                "maxConcurrentRequests": 5,
+                "maxConcurrentRequests": 50,
                 "statTimerInterval": 5000,
-                "workInterval": 100,
-                "maxSamePluginInstances": 20,
+                "workInterval": 50,
+                "maxSamePluginInstances": 5,
                 "pluginTimeout": 40
             }
         };
@@ -198,14 +216,14 @@ class Tchecker extends turbine.services.TbaseService {
     onIsMasterChanged(e) {
         this.logger.info("ISMASTER_CHANGED (process PID=" + process.pid + ", worker=" + process.pid + ") => " + e.data);
         if (e.data && this.config.active) {
-            this.daoServices.reset().then(function (result) {
+            this.daoServices.reset().then((result) => {
                 if (this.active)
                     this.scheduler.start();
-            }.bind(this), function (err) {
+            }, (err) => {
                 if (this.active)
                     this.scheduler.start();
                 this.logger.error("Tplugin.onIsMasterChanged.reset ERROR " + err);
-            }.bind(this));
+            });
         }
         else {
             this.scheduler.stop();
@@ -297,13 +315,13 @@ class Tchecker extends turbine.services.TbaseService {
             promises.push(this.daoServices.save(service));
         }
         Promise.all(promises)
-            .then(function (results) {
+            .then((results) => {
             this.logger.error("Nombre de services créés: " + results.length);
             res.send(results);
-        }.bind(this), function (err) {
+        }, (err) => {
             this.logger.error("error " + err.toString());
             res.status(500).send(err);
-        }.bind(this));
+        });
     }
     test(req, res) {
         this.logger.info("TEST NODEID=" + app.ClusterManager.nodeID);
